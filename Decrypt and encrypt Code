@@ -1,0 +1,129 @@
+package com.example.karlmosses.cryptext;
+
+import android.content.Intent;
+import android.content.pm.ActivityInfo;
+import android.graphics.PorterDuff;
+import android.net.Uri;
+import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AppCompatActivity;
+import android.os.Bundle;
+import android.text.Editable;
+import android.text.InputFilter;
+import android.text.Spanned;
+import android.text.TextWatcher;
+import android.text.method.ScrollingMovementMethod;
+import android.view.View;
+import android.view.WindowManager;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.NumberPicker;
+import android.widget.TextView;
+
+
+public class Send extends AppCompatActivity {
+        NumberPicker keyPicker;
+    EditText inputText;
+    TextView encryptedText;
+
+
+    Button clearButton, smsButton;
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_send);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+
+        getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+        encryptedText = findViewById(R.id.textView2);
+        encryptedText.setMovementMethod(new ScrollingMovementMethod());
+
+        keyPicker = findViewById(R.id.numberPicker);
+        keyPicker.setMinValue(0);
+        keyPicker.setMaxValue(25);
+
+        keyPicker.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
+            @Override
+            public void onValueChange(NumberPicker numberPicker, int i, int i2) {
+                refreshCipherText();
+                //computeRotationCipher(keyPicker.getValue(), inputText.getText().toString());
+            }
+        });
+
+        inputText = findViewById(R.id.editText);
+        inputText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int start, int count, int after) { }
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int start, int count, int after) {
+                refreshCipherText();
+                //computeRotationCipher(keyPicker.getValue(), inputText.getText().toString());
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {}
+        });
+
+        InputFilter filter = new InputFilter() {
+            @Override
+            public CharSequence filter(CharSequence source, int start, int end, Spanned dest, int dstart, int dend) {
+                for ( int i = start; i < end; i++) {
+                    if (!Character.isLetter(source.charAt(i)) && source.charAt(i) != ' ') {
+                        return "";
+                    }
+                }
+                return null;
+            }
+        };
+        inputText.setFilters(new InputFilter[]{filter});
+
+        clearButton = findViewById(R.id.button);
+        clearButton.getBackground().setColorFilter(ContextCompat.getColor(this, R.color.colorAccent), PorterDuff.Mode.MULTIPLY);
+        clearButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                inputText.setText("");
+                encryptedText.setText("");
+            }
+        });
+
+        smsButton = findViewById(R.id.buttonsms);
+        smsButton.getBackground().setColorFilter(ContextCompat.getColor(this, R.color.colorAccent), PorterDuff.Mode.MULTIPLY);
+        smsButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent sendIntent = new Intent(Intent.ACTION_SENDTO, Uri.fromParts("smsto", "", null));
+                sendIntent.putExtra("sms_body", encryptedText.getText().toString());
+                startActivity(sendIntent);
+            }
+        });
+
+
+    }
+    public void refreshCipherText() {
+        String output = computeRotationCipher(keyPicker.getValue(), inputText.getText().toString());
+        encryptedText.setText(output);
+    }
+    public String computeRotationCipher(int rotation, String input) {
+        // assume input is only a-zA-Z
+        int a_num = (int) 'a';
+        int A_num = (int) 'A';
+        String output = "";
+        for (int i = 0; i < input.length(); i++) {
+            int cur = (int) input.charAt(i);
+            // check if lowercase or uppercase
+            if (input.charAt(i) == ' ') {
+                output += " ";
+            } else if (cur >= a_num && cur < a_num + 26) {
+                output += Character.toString((char) ((((cur - a_num) + rotation) % 26) + a_num));
+            } else {
+                output += Character.toString((char) ((((cur - A_num) + rotation) % 26) + A_num));
+            }
+        }
+
+        return output;
+    }
+
+}
